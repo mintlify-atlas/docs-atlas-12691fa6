@@ -1,0 +1,209 @@
+---
+title: "Citas endpoints: manage grooming appointments in Pelupatas"
+description: "Manage grooming appointments in Pelupatas. Create, retrieve, update status, and delete citas records with date, time, pet, groomer, and notes fields."
+---
+
+The Pelupatas Backend API provides endpoints for managing cita (appointment) records. Each cita captures the grooming appointment date, time, the associated pet and groomer, optional notes, and a status field that tracks the appointment's progress. All endpoints require a valid JWT Bearer token in the `Authorization` header.
+
+**Base URL:** `http://localhost/pelupatas/backend/src/api`
+
+## GET /api/citas
+
+Returns an array of all cita records, ordered by `fecha` descending then `hora` descending (most recent first).
+
+**Auth required:** `Authorization: Bearer <token>`
+
+### Example request
+
+```bash
+curl http://localhost/pelupatas/backend/src/api/citas \
+  -H "Authorization: Bearer <token>"
+```
+
+### Example response
+
+```json
+[
+  {
+    "id": 5,
+    "fecha": "2024-04-15",
+    "hora": "10:30:00",
+    "id_mascota": 9,
+    "id_peluquera": 3,
+    "notas": "Corte de pelo completo",
+    "estado": "pendiente"
+  }
+]
+```
+
+---
+
+## GET /api/citas/:id
+
+Returns a single cita record identified by its ID.
+
+**Auth required:** `Authorization: Bearer <token>`
+
+### Path parameter
+
+<ParamField path="id" type="string" required>
+  The numeric ID of the cita to retrieve.
+</ParamField>
+
+### Example request
+
+```bash
+curl http://localhost/pelupatas/backend/src/api/citas/5 \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+## POST /api/citas
+
+Creates a new cita record.
+
+**Auth required:** `Authorization: Bearer <token>`
+
+**Content-Type:** `application/json`
+
+### Request body
+
+<ParamField body="fecha" type="string" required>
+  Appointment date in `YYYY-MM-DD` format (e.g., `"2024-04-15"`).
+</ParamField>
+
+<ParamField body="hora" type="string" required>
+  Appointment time in `HH:MM:SS` format (e.g., `"10:30:00"`).
+</ParamField>
+
+<ParamField body="id_mascota" type="number" required>
+  The numeric ID of the pet being groomed.
+</ParamField>
+
+<ParamField body="id_peluquera" type="number" required>
+  The numeric ID of the groomer assigned to this appointment.
+</ParamField>
+
+<ParamField body="notas" type="string">
+  Additional notes for the appointment (e.g., services requested, special instructions). The route does not require this field, but the controller does — if omitted, the controller returns `{"success": false, "message": "Faltan datos"}` without creating the record.
+</ParamField>
+
+### Response
+
+On success: `{"success": true}`
+
+On missing route-level fields (`fecha`, `hora`, `id_mascota`, `id_peluquera`): `{"success": false, "message": "Faltan datos obligatorios"}` (HTTP 400)
+
+On missing `notas` (controller-level): `{"success": false, "message": "Faltan datos"}` (no HTTP status code set)
+
+### Example request
+
+```bash
+curl -X POST http://localhost/pelupatas/backend/src/api/citas \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fecha": "2024-04-15",
+    "hora": "10:30:00",
+    "id_mascota": 9,
+    "id_peluquera": 3,
+    "notas": "Corte de pelo completo"
+  }'
+```
+
+---
+
+## PUT /api/citas/:id
+
+Updates an existing cita. The route validates four scheduling fields; the controller then applies the `estado` update.
+
+**Auth required:** `Authorization: Bearer <token>`
+
+**Content-Type:** `application/json`
+
+### Path parameter
+
+<ParamField path="id" type="string" required>
+  The numeric ID of the cita to update.
+</ParamField>
+
+### Request body
+
+<ParamField body="fecha" type="string" required>
+  Appointment date in `YYYY-MM-DD` format (e.g., `"2024-04-15"`).
+</ParamField>
+
+<ParamField body="hora" type="string" required>
+  Appointment time in `HH:MM:SS` format (e.g., `"10:30:00"`).
+</ParamField>
+
+<ParamField body="id_mascota" type="number" required>
+  The numeric ID of the pet.
+</ParamField>
+
+<ParamField body="id_peluquera" type="number" required>
+  The numeric ID of the groomer.
+</ParamField>
+
+<ParamField body="estado" type="string" required>
+  The new status for the appointment (e.g., `"pendiente"`, `"completada"`, `"cancelada"`). The controller reads this field and calls `updateEstadoCita()`. Any other fields in the body beyond the five above are ignored by the model.
+</ParamField>
+
+<Note>
+  The route (`citas.routes.php`) validates that `fecha`, `hora`, `id_mascota`, and `id_peluquera` are all present before passing to the controller. The controller then checks `estado` and calls `updateEstadoCita()`. All five fields are required for the request to succeed end-to-end.
+</Note>
+
+### Response
+
+On success: `{"success": true}`
+
+On missing scheduling fields: `{"success": false, "message": "Faltan datos para actualizar"}` (HTTP 400)
+
+On missing `estado`: `{"success": false, "message": "Faltan datos"}` (no HTTP status code set by controller)
+
+On missing ID: `{"success": false, "message": "Falta ID"}` (HTTP 400)
+
+### Example request
+
+```bash
+curl -X PUT "http://localhost/pelupatas/backend/src/api/citas/5" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fecha": "2024-04-15",
+    "hora": "10:30:00",
+    "id_mascota": 9,
+    "id_peluquera": 3,
+    "estado": "completada"
+  }'
+```
+
+---
+
+## DELETE /api/citas/:id
+
+Permanently deletes a cita record from the database.
+
+**Auth required:** `Authorization: Bearer <token>`
+
+### Path parameter
+
+<ParamField path="id" type="string" required>
+  The numeric ID of the cita to delete.
+</ParamField>
+
+This is a **hard delete**. The endpoint executes `DELETE FROM citas WHERE id = :id`, permanently removing the record. This action cannot be undone.
+
+### Response
+
+On success: `{"success": true}`
+
+On missing ID: `{"success": false, "message": "Falta ID"}` (HTTP 400)
+
+### Example request
+
+```bash
+curl -X DELETE http://localhost/pelupatas/backend/src/api/citas/5 \
+  -H "Authorization: Bearer <token>"
+```

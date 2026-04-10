@@ -1,80 +1,92 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Get started with the Pelupatas Backend API quickly"
+description: "Learn how to authenticate with the Pelupatas API and make your first requests to manage pets and appointments in under five minutes."
 ---
 
-## Get started in three steps
+This guide walks you through authenticating with the Pelupatas Backend API and making your first requests. By the end, you will have obtained a JWT token, listed all pet records, and created a new pet — all using `curl` from the command line.
 
-Get your documentation site running locally and make your first customization.
+<Note>
+  All protected endpoints require an `Authorization: Bearer <token>` header. Only `POST /api/login` is public.
+</Note>
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Prerequisites">
+    Make sure your environment meets these requirements before you start:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    - **PHP 7.4 or higher** — the API is built on PHP
+    - **Apache with mod_rewrite enabled** — required for URL routing
+    - **MySQL 5.7 or higher** — the database backend
+    - **A REST client** — `curl`, [Postman](https://www.postman.com), or any HTTP tool you prefer
+  </Step>
 
-### Step 2: Deploy your changes
+  <Step title="Authenticate">
+    Call `POST /api/login` with your email and password to receive a JWT token.
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash
+    curl --request POST \
+      --url http://localhost/pelupatas/backend/src/api/login \
+      --header "Content-Type: application/json" \
+      --data '{"email":"user@example.com","password":"yourpassword"}'
+    ```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    A successful response returns a token and the authenticated user's details:
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```json
+    {
+      "success": true,
+      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+      "usuario": {
+        "id": 1,
+        "email": "user@example.com"
+      }
+    }
+    ```
 
-### Step 3: Go live
+    <Tip>
+      Store the `token` value in an environment variable (e.g., `TOKEN`) so you can reuse it across requests without copying it each time: `export TOKEN="eyJ0eXAi..."`.
+    </Tip>
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="List all pets">
+    Call `GET /api/mascotas` with your token in the `Authorization` header to retrieve all pet records.
+
+    ```bash
+    curl --request GET \
+      --url http://localhost/pelupatas/backend/src/api/mascotas \
+      --header "Authorization: Bearer $TOKEN"
+    ```
+
+    The API returns a JSON array of all active pet records stored in the database.
+  </Step>
+
+  <Step title="Create a pet">
+    Call `POST /api/mascotas` to add a new pet record. Provide all required fields in the request body.
+
+    ```bash
+    curl --request POST \
+      --url http://localhost/pelupatas/backend/src/api/mascotas \
+      --header "Authorization: Bearer $TOKEN" \
+      --header "Content-Type: application/json" \
+      --data '{
+        "nombre": "Thor",
+        "raza": "border collie",
+        "edad": 5,
+        "observaciones": "Pastor, fiel",
+        "id_dueno": 2
+      }'
+    ```
+
+    On success, the API returns `{"success": true}`.
+  </Step>
+</Steps>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Authentication" icon="lock" href="/authentication">
+    Understand token expiry and how to handle authentication errors
+  </Card>
+  <Card title="API reference" icon="code" href="/api-reference/overview">
+    Explore all available endpoints for mascotas and citas
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

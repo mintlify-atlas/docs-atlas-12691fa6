@@ -1,0 +1,210 @@
+---
+title: "Mascotas endpoints: manage pet records in Pelupatas"
+description: "Manage pet records in Pelupatas. Create, retrieve, update, and soft-delete mascotas with owner, breed, age, observations, and active-status fields."
+---
+
+The Pelupatas Backend API exposes a set of endpoints for managing mascota (pet) records. Each mascota stores the pet's name, breed, age, observations, a reference to its owner, and an active flag used for soft deletion. All endpoints require a valid JWT Bearer token in the `Authorization` header.
+
+**Base URL:** `http://localhost/pelupatas/backend/src/api`
+
+## GET /api/mascotas
+
+Returns an array of all mascota records in the database.
+
+**Auth required:** `Authorization: Bearer <token>`
+
+### Example request
+
+```bash
+curl http://localhost/pelupatas/backend/src/api/mascotas \
+  -H "Authorization: Bearer <token>"
+```
+
+### Example response
+
+```json
+[
+  {
+    "id": 9,
+    "nombre": "Thor",
+    "raza": "border collie",
+    "edad": 5,
+    "observaciones": "Pastor, fiel",
+    "id_dueno": 2,
+    "activa": 1
+  }
+]
+```
+
+---
+
+## GET /api/mascotas/:id
+
+Returns a single mascota record identified by its ID.
+
+**Auth required:** `Authorization: Bearer <token>`
+
+### Path parameter
+
+<ParamField path="id" type="string" required>
+  The numeric ID of the mascota to retrieve.
+</ParamField>
+
+### Example request
+
+```bash
+curl http://localhost/pelupatas/backend/src/api/mascotas/9 \
+  -H "Authorization: Bearer <token>"
+```
+
+### Example response
+
+```json
+{
+  "id": 9,
+  "nombre": "Thor",
+  "raza": "border collie",
+  "edad": 5,
+  "observaciones": "Pastor, fiel",
+  "id_dueno": 2,
+  "activa": 1
+}
+```
+
+---
+
+## POST /api/mascotas
+
+Creates a new mascota record.
+
+**Auth required:** `Authorization: Bearer <token>`
+
+**Content-Type:** `application/json`
+
+### Request body
+
+<ParamField body="nombre" type="string" required>
+  The pet's name.
+</ParamField>
+
+<ParamField body="raza" type="string" required>
+  The pet's breed.
+</ParamField>
+
+<ParamField body="edad" type="number" required>
+  The pet's age in years.
+</ParamField>
+
+<ParamField body="observaciones" type="string" required>
+  Notes or observations about the pet (e.g., temperament, medical notes).
+</ParamField>
+
+<ParamField body="id_dueno" type="number" required>
+  The numeric ID of the owner user.
+</ParamField>
+
+### Response
+
+On success: `{"success": true}`
+
+On missing fields: `{"success": false, "message": "Faltan datos obligatorios"}` (HTTP 400)
+
+### Example request
+
+```bash
+curl -X POST http://localhost/pelupatas/backend/src/api/mascotas \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Thor",
+    "raza": "border collie",
+    "edad": 5,
+    "observaciones": "Pastor, fiel",
+    "id_dueno": 2
+  }'
+```
+
+---
+
+## PUT /api/mascotas/:id
+
+Updates the details of an existing mascota record.
+
+**Auth required:** `Authorization: Bearer <token>`
+
+**Content-Type:** `application/json`
+
+### Path parameter
+
+<ParamField path="id" type="string" required>
+  The numeric ID of the mascota to update.
+</ParamField>
+
+### Request body
+
+<ParamField body="nombre" type="string" required>
+  Updated pet name.
+</ParamField>
+
+<ParamField body="raza" type="string" required>
+  Updated breed.
+</ParamField>
+
+<ParamField body="edad" type="number" required>
+  Updated age in years.
+</ParamField>
+
+<ParamField body="observaciones" type="string" required>
+  Updated notes or observations.
+</ParamField>
+
+### Response
+
+On success: `{"success": true}`
+
+On missing fields: `{"success": false, "message": "Faltan datos para actualizar"}` (HTTP 400)
+
+### Example request
+
+```bash
+curl -X PUT http://localhost/pelupatas/backend/src/api/mascotas/9 \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Thor",
+    "raza": "border collie",
+    "edad": 6,
+    "observaciones": "Pastor, fiel, revisión anual pendiente"
+  }'
+```
+
+---
+
+## DELETE /api/mascotas/:id
+
+Deactivates a mascota record by setting its `activa` flag to `0`.
+
+**Auth required:** `Authorization: Bearer <token>`
+
+### Path parameter
+
+<ParamField path="id" type="string" required>
+  The numeric ID of the mascota to deactivate.
+</ParamField>
+
+<Note>
+  This is a **soft delete**. The `DELETE` endpoint calls `lockMascota()` internally, which sets `activa = 0` on the record. The mascota row is **not** physically removed from the database, so its history and associated appointments remain intact.
+</Note>
+
+### Response
+
+On success: `{"success": true}`
+
+On missing ID: `{"success": false, "message": "Falta ID"}` (HTTP 400)
+
+### Example request
+
+```bash
+curl -X DELETE http://localhost/pelupatas/backend/src/api/mascotas/9 \
+  -H "Authorization: Bearer <token>"
+```

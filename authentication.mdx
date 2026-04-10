@@ -1,0 +1,112 @@
+---
+title: "Authenticate requests with the Pelupatas Backend API"
+description: "Learn how JWT Bearer token authentication works in the Pelupatas API, including how to obtain tokens, use them in requests, and handle expiry."
+---
+
+The Pelupatas API uses JWT (JSON Web Token) Bearer token authentication. You obtain a token by submitting your credentials to `POST /api/login`. The token is then passed in the `Authorization` header on every subsequent request to a protected endpoint. Tokens are signed with HS256 and are valid for exactly 1 hour from the time they are issued.
+
+<Warning>
+  The `POST /api/login` endpoint itself does **not** require a token. All other endpoints (`/api/mascotas`, `/api/citas`) do.
+</Warning>
+
+## Obtaining a token
+
+Send your email and password to `POST /api/login` to receive a token.
+
+### Request body
+
+<ParamField body="email" type="string" required>
+  The email address associated with your account.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The account password.
+</ParamField>
+
+### Example request
+
+```bash
+curl --request POST \
+  --url http://localhost/pelupatas/backend/src/api/login \
+  --header "Content-Type: application/json" \
+  --data '{"email":"user@example.com","password":"yourpassword"}'
+```
+
+### Response fields
+
+<ResponseField name="success" type="boolean" required>
+  `true` when authentication succeeds, `false` otherwise.
+</ResponseField>
+
+<ResponseField name="token" type="string" required>
+  The signed JWT token. Include this value in the `Authorization` header for all protected requests.
+</ResponseField>
+
+<ResponseField name="usuario" type="object" required>
+  The authenticated user's details.
+
+  <Expandable title="properties">
+    <ResponseField name="id" type="number" required>
+      The user's unique numeric identifier.
+    </ResponseField>
+    <ResponseField name="email" type="string" required>
+      The user's email address.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "success": true,
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "usuario": {
+    "id": 1,
+    "email": "user@example.com"
+  }
+}
+```
+
+## Using your token
+
+Include the token in the `Authorization` header of every request to a protected endpoint, using the `Bearer` scheme.
+
+```
+Authorization: Bearer <your-token>
+```
+
+### Example request with token
+
+```bash
+curl --request GET \
+  --url http://localhost/pelupatas/backend/src/api/mascotas \
+  --header "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+```
+
+## Token expiry
+
+Tokens expire **1 hour (3600 seconds)** after they are issued. Once a token expires, you must re-authenticate by calling `POST /api/login` again to obtain a fresh token. There is no token refresh mechanism — each new session requires a new login call.
+
+## Authentication errors
+
+All authentication failures return HTTP `401 Unauthorized`. The response body identifies the specific reason.
+
+| Message | Cause |
+| ------- | ----- |
+| `"Token no enviado"` | The `Authorization` header is missing from the request. |
+| `"Token inválido"` | The header was present but no token value could be extracted. |
+| `"Token inválido o expirado"` | The token signature is invalid or the token has expired. |
+
+### Example error response
+
+```json
+{
+  "success": false,
+  "message": "Token inválido o expirado"
+}
+```
+
+<Note>
+  If you receive a `401` response, check that you are including the full `Authorization: Bearer <token>` header and that your token was issued within the last hour.
+</Note>

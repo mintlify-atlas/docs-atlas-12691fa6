@@ -1,0 +1,83 @@
+---
+title: 'Pelupatas API error codes and JSON response formats'
+description: 'Every error the Pelupatas API can return — HTTP status codes, JSON structure, authentication failures, and validation messages with their exact text.'
+---
+
+When a request fails, the Pelupatas API always returns a JSON body — never an HTML error page. Every error response has `"success": false` and a `"message"` string that describes what went wrong. You can rely on this structure to handle errors consistently across all endpoints.
+
+## HTTP status codes
+
+| Status | Meaning | When it occurs |
+|--------|---------|----------------|
+| `200` | Success | Request completed successfully |
+| `400` | Bad Request | Required fields are missing from the request body or the URL |
+| `401` | Unauthorized | No token was sent, the token is empty, or the token is invalid or expired |
+| `404` | Not Found | The path does not match any route in the router |
+| `405` | Method Not Allowed | The HTTP method is not supported for the requested endpoint |
+
+## Error response structure
+
+All error responses share the same JSON shape regardless of status code:
+
+```json
+{
+  "success": false,
+  "message": "Faltan datos obligatorios"
+}
+```
+
+Parse this structure the same way in every error-handling branch of your client code.
+
+## Authentication errors
+
+These errors are returned by the JWT middleware before any route logic runs. All three use status `401`.
+
+| Status | Message | Cause |
+|--------|---------|-------|
+| `401` | `"Token no enviado"` | The `Authorization` header is absent from the request |
+| `401` | `"Token inválido"` | The `Authorization` header is present but the token string is empty after stripping `Bearer ` |
+| `401` | `"Token inválido o expirado"` | JWT validation failed — the signature is wrong, the token is malformed, or it has passed its 1-hour expiry |
+
+<Warning>
+Tokens expire after exactly 1 hour. Your client must re-authenticate via `POST /api/login` once a token expires; there is no refresh endpoint.
+</Warning>
+
+## Validation errors
+
+These errors are returned by the resource routes when request data does not pass validation checks.
+
+| Status | Message | Cause |
+|--------|---------|-------|
+| `400` | `"Faltan datos obligatorios"` | Required fields are missing in a `POST` request body |
+| `400` | `"Faltan datos para actualizar"` | Required fields are missing in a `PUT` request body |
+| `400` | `"Falta ID"` | No ID was provided in the URL for a `PUT` or `DELETE` request |
+| `405` | `"Método no permitido"` | The HTTP method used is not handled by the route switch |
+| `404` | `"Ruta no encontrada"` | The URL path did not match any known resource in the router |
+
+<Info>
+The `405` response comes from the `default` branch of each resource's method switch, while `404` comes from the top-level router's `default` case. They are separate checks.
+</Info>
+
+## Handling errors
+
+Use the `"success"` field as the primary check, then read `"message"` to branch your error handling. The following example shows how to call the API with `curl` and parse the response in bash:
+
+```bash
+RESPONSE=$(curl --silent --write-out "\n%{http_code}" \
+  -X POST http://localhost/pelupatas/backend/src/api/mascotas \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"nombre":"Nala","raza":"Labrador","edad":3,"observaciones":"","id_dueno":7}')
+
+HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | head -n-1)
+
+if [ "$HTTP_STATUS" -ne 200 ]; then
+  MESSAGE=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['message'])")
+  echo "Error $HTTP_STATUS: $MESSAGE"
+fi
+```
+
+<Tip>
+In JavaScript frontends you can check `response.ok` first and then call `response.json()` to read the `message` field — the JSON structure is consistent across all error types.
+</Tip>

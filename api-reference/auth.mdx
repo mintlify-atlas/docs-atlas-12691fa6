@@ -1,0 +1,82 @@
+---
+title: "Pelupatas login endpoint: POST /api/login reference"
+description: "Authenticate a Pelupatas user with email and password. Returns a signed HS256 JWT Bearer token valid for 1 hour plus basic user info."
+---
+
+The Pelupatas Backend API uses JWT-based authentication. This page documents the single authentication endpoint: `POST /api/login`. Sending valid credentials to this endpoint returns a signed Bearer token you must include in the `Authorization` header of every subsequent protected request.
+
+## POST /api/login
+
+Authenticates a user by verifying the provided email and password against the stored bcrypt hash. No authentication token is required to call this endpoint.
+
+**Base URL:** `http://localhost/pelupatas/backend/src/api`
+
+**Content-Type:** `application/json`
+
+### Request body
+
+<ParamField body="email" type="string" required>
+  The user's email address registered in the system.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The user's plaintext password. The API verifies it against the bcrypt hash stored in the database.
+</ParamField>
+
+### Response — 200 OK
+
+<ResponseField name="success" type="boolean">
+  `true` when authentication succeeds.
+</ResponseField>
+
+<ResponseField name="token" type="string">
+  Signed JWT Bearer token. Include this value in subsequent requests as `Authorization: Bearer <token>`.
+</ResponseField>
+
+<ResponseField name="usuario" type="object">
+  Basic information about the authenticated user.
+  <Expandable title="properties">
+    <ResponseField name="id" type="number">
+      Unique numeric identifier for the user.
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      Email address of the authenticated user.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error responses
+
+| Condition | Response body |
+|---|---|
+| Invalid credentials | `{"success": false, "message": "Credenciales incorrectas"}` |
+| Empty or missing request body | `{"success": false, "message": "Body vacío"}` |
+
+### Example request
+
+```bash
+curl -X POST http://localhost/pelupatas/backend/src/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "secret"}'
+```
+
+### Example success response
+
+```json
+{
+  "success": true,
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MTIwMDAwMDAsImV4cCI6MTcxMjAwMzYwMCwidXNlciI6eyJpZCI6MSwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn19.abc123",
+  "usuario": {
+    "id": 1,
+    "email": "user@example.com"
+  }
+}
+```
+
+<Note>
+  Store the returned `token` securely. Include it in the `Authorization` header of every protected API request using the format `Authorization: Bearer <token>`.
+</Note>
+
+<Warning>
+  The token expires after **1 hour**. Once expired, you must re-authenticate by calling `POST /api/login` again to obtain a new token.
+</Warning>

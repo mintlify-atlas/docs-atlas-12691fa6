@@ -1,0 +1,127 @@
+---
+title: "Deploy the Pelupatas Backend API on Apache and LAMP"
+description: "Deploy the Pelupatas Backend API on a LAMP stack: configure Apache mod_rewrite, set production database credentials, and verify the API is reachable."
+---
+
+The Pelupatas Backend API runs on a standard LAMP stack — Linux, Apache 2.4+, MySQL 5.7+, and PHP 7.4+. Apache's `mod_rewrite` module routes all requests through a single front controller, so you need to enable it and configure `AllowOverride` before the API will respond correctly.
+
+<Steps>
+  <Step title="Confirm prerequisites">
+    Make sure the following are installed and running on your server:
+
+    - Apache 2.4 or later
+    - PHP 7.4 or later with the `pdo_mysql` extension enabled
+    - MySQL 5.7 or later
+    - `mod_rewrite` enabled in Apache
+
+    Enable `mod_rewrite` if it is not already active:
+
+    ```bash
+    sudo a2enmod rewrite
+    sudo systemctl restart apache2
+    ```
+  </Step>
+
+  <Step title="Copy the project files">
+    Place the project directory under the Apache web root so that the API is reachable at the expected base path:
+
+    ```bash
+    sudo cp -r Proyecto_DAW_CFGS_Backend /var/www/html/pelupatas/backend
+    ```
+
+    The resulting layout should be:
+
+    ```text
+    /var/www/html/
+    └── pelupatas/
+        └── backend/
+            ├── src/
+            │   ├── config/
+            │   ├── controllers/
+            │   ├── middlewares/
+            │   ├── models/
+            │   └── routes/
+            │       └── api/
+            │           └── api.routes.php  ← front controller
+            └── test_conexion.php
+    ```
+  </Step>
+
+  <Step title="Enable AllowOverride for the web root">
+    The `.htaccess` file in `src/` rewrites all requests to `src/routes/api.routes.php`. Apache must be allowed to read `.htaccess` files, so open your virtual host configuration and set `AllowOverride All`:
+
+    ```text
+    <Directory /var/www/html/pelupatas>
+        AllowOverride All
+        Require all granted
+    </Directory>
+    ```
+
+    The actual `.htaccess` file in `src/` contains:
+
+    ```text
+    RewriteEngine On
+
+    RewriteRule ^api/(.*)$ routes/api.routes.php [QSA,L]
+    ```
+
+    This rewrites any request matching `api/*` to `routes/api.routes.php` within the `src/` directory.
+
+    Reload Apache after editing the virtual host file:
+
+    ```bash
+    sudo systemctl reload apache2
+    ```
+  </Step>
+
+  <Step title="Configure database credentials">
+    Update `src/config/database.php` with your production database credentials:
+
+    ```php
+    private $host     = "localhost";
+    private $db_name  = "peluqueria_canina";
+    private $username = "your_db_user";
+    private $password = "your_db_password";
+    ```
+
+    See the [database setup guide](/guides/database-setup) for instructions on creating the schema.
+  </Step>
+
+  <Step title="Set a production JWT secret">
+    Open `src/config/jwt.php` and replace the default secret key:
+
+    ```php
+    private $secret = "your-long-random-secret-here";
+    ```
+
+    <Warning>
+      The default secret key is `CLAVE_SUPER_SIMPLE_123`. Any attacker who knows this value can forge valid JWT tokens and authenticate as any user. Replace it with a long, randomly generated string before going live and never commit it to source control.
+    </Warning>
+  </Step>
+
+  <Step title="Test the deployment">
+    Navigate to `test_conexion.php` to confirm the database connection:
+
+    ```bash
+    curl http://your-domain/pelupatas/backend/test_conexion.php
+    ```
+
+    You should see `Conexión correcta`. Then verify the API itself by sending a login request:
+
+    ```bash
+    curl -X POST http://your-domain/pelupatas/backend/src/api/login \
+      -H "Content-Type: application/json" \
+      -d '{"email": "user@example.com", "password": "yourpassword"}'
+    ```
+
+    A successful response returns a JWT token. The base URL for all API endpoints after deployment is:
+
+    ```text
+    http://your-domain/pelupatas/backend/src/api
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  The main router in `src/routes/api.routes.php` already sends `Access-Control-Allow-Origin: *`, which allows requests from any origin. For production, replace the wildcard with the specific domain of your frontend application to prevent unauthorized cross-origin requests.
+</Tip>

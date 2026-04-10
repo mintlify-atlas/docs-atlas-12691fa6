@@ -1,0 +1,64 @@
+{
+  "projectType": "api-service",
+  "projectName": "Pelupatas Backend API",
+  "projectDescription": "A PHP REST API backend for a pet grooming (peluquería canina) management system, handling users, pets, and appointments with JWT authentication.",
+  "theme": "luma",
+  "primaryColor": "#7C3AED",
+  "lightColor": "#EDE9FE",
+  "darkColor": "#4C1D95",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "authentication"]
+          },
+          {
+            "group": "Guides",
+            "pages": ["guides/project-structure", "guides/database-setup", "guides/deployment"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api-reference/overview", "api-reference/errors"]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api-reference/auth",
+              "api-reference/mascotas",
+              "api-reference/citas"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "JWT-based authentication with 1-hour token expiry",
+    "Pet (mascota) management with soft-delete support via active flag",
+    "Appointment (cita) scheduling with groomer assignment",
+    "RESTful CRUD endpoints for mascotas and citas resources",
+    "CORS-enabled for cross-origin frontend integration",
+    "PDO-based MySQL connectivity with prepared statements"
+  ],
+  "publicApiSurface": [
+    "POST /api/login — Authenticate user, returns JWT token",
+    "GET /api/mascotas — List all pets",
+    "GET /api/mascotas/:id — Get a pet by ID",
+    "POST /api/mascotas — Create a new pet",
+    "PUT /api/mascotas/:id — Update a pet",
+    "DELETE /api/mascotas/:id — Soft-delete a pet (sets activa=0)",
+    "GET /api/citas — List all appointments",
+    "GET /api/citas/:id — Get an appointment by ID",
+    "POST /api/citas — Create a new appointment",
+    "PUT /api/citas/:id — Update appointment status",
+    "DELETE /api/citas/:id — Delete an appointment"
+  ]
+}

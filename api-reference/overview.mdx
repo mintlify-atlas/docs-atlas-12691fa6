@@ -1,0 +1,118 @@
+---
+title: 'Pelupatas REST API: base URL, auth, and all endpoints'
+description: 'Complete reference for the Pelupatas backend API — base URL, authentication, request and response format, CORS, and the full list of available endpoints.'
+---
+
+The Pelupatas backend API is a PHP REST API that exposes three resource groups: authentication (`login`), pets (`mascotas`), and appointments (`citas`). Every endpoint communicates over HTTP and returns JSON. The base URL for all requests is `http://localhost/pelupatas/backend/src/api`.
+
+## Base URL
+
+All endpoints are relative to this base URL:
+
+```
+http://localhost/pelupatas/backend/src/api
+```
+
+For example, the pets list endpoint is at:
+
+```
+http://localhost/pelupatas/backend/src/api/mascotas
+```
+
+## Authentication
+
+All `mascotas` and `citas` endpoints require a valid JWT in the `Authorization` header. The `login` endpoint does not require authentication — it is where you obtain the token.
+
+Tokens are signed with HS256 and expire after **1 hour**.
+
+Send the token as a Bearer credential on every protected request:
+
+```http
+Authorization: Bearer <your_token>
+```
+
+<Warning>
+Requests to protected endpoints without a valid token receive a `401 Unauthorized` response immediately. See the [errors reference](/api-reference/errors) for the exact error messages returned.
+</Warning>
+
+## Request format
+
+Send all request bodies as JSON and set the `Content-Type` header accordingly:
+
+```http
+Content-Type: application/json
+```
+
+Example POST body for creating a pet:
+
+```json
+{
+  "nombre": "Nala",
+  "raza": "Labrador",
+  "edad": 3,
+  "observaciones": "Alergia al pollo",
+  "id_dueno": 7
+}
+```
+
+<Note>
+If you omit required fields the API returns `400 Bad Request` with `"message": "Faltan datos obligatorios"`.
+</Note>
+
+## Response format
+
+All responses — success and error alike — are JSON. The `Content-Type` response header is always `application/json; charset=UTF-8`.
+
+**Success responses** return either a `"success": true` envelope or the resource directly:
+
+```json
+{ "success": true }
+```
+
+```json
+[
+  { "id": 1, "nombre": "Nala", "raza": "Labrador", "edad": 3 },
+  { "id": 2, "nombre": "Max", "raza": "Beagle", "edad": 5 }
+]
+```
+
+**Error responses** always include `"success": false` and a `"message"` string:
+
+```json
+{
+  "success": false,
+  "message": "Faltan datos obligatorios"
+}
+```
+
+## CORS
+
+The API sets the following headers on every response:
+
+```http
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+```
+
+OPTIONS preflight requests receive an immediate `200 OK` and no body. This configuration allows browser-based frontends on any origin to call the API directly without a proxy.
+
+## Available endpoints
+
+| Method | Path | Auth required | Description |
+|--------|------|:---:|-------------|
+| `POST` | `/api/login` | No | Authenticate user and receive a JWT |
+| `GET` | `/api/mascotas` | Yes | List all pets |
+| `GET` | `/api/mascotas/:id` | Yes | Get a single pet by ID |
+| `POST` | `/api/mascotas` | Yes | Create a new pet |
+| `PUT` | `/api/mascotas/:id` | Yes | Update an existing pet |
+| `DELETE` | `/api/mascotas/:id` | Yes | Soft-delete a pet |
+| `GET` | `/api/citas` | Yes | List all appointments |
+| `GET` | `/api/citas/:id` | Yes | Get a single appointment by ID |
+| `POST` | `/api/citas` | Yes | Create a new appointment |
+| `PUT` | `/api/citas/:id` | Yes | Update an appointment's status |
+| `DELETE` | `/api/citas/:id` | Yes | Delete an appointment |
+
+<Tip>
+For detailed request/response schemas and field-level documentation for each endpoint, see the individual resource pages under **Mascotas** and **Citas** in the sidebar.
+</Tip>

@@ -1,0 +1,120 @@
+---
+title: "Set up the peluqueria_canina MySQL database schema"
+description: "Create the peluqueria_canina MySQL database, define the usuarios, mascotas, and citas tables, then configure the PDO connection in database.php."
+---
+
+The Pelupatas Backend API requires a MySQL database named `peluqueria_canina` with three tables: `usuarios`, `mascotas`, and `citas`. This guide walks you through creating the database schema and configuring the PDO connection in `src/config/database.php`.
+
+<Steps>
+  <Step title="Create the database">
+    Log in to your MySQL server and run the following statement:
+
+    ```sql
+    CREATE DATABASE peluqueria_canina
+      CHARACTER SET utf8mb4
+      COLLATE utf8mb4_unicode_ci;
+
+    USE peluqueria_canina;
+    ```
+  </Step>
+
+  <Step title="Create the tables">
+    Run the three `CREATE TABLE` statements below in order.
+
+    **usuarios** — stores authenticated staff accounts:
+
+    ```sql
+    CREATE TABLE usuarios (
+      id       INT          NOT NULL AUTO_INCREMENT,
+      email    VARCHAR(255) NOT NULL UNIQUE,
+      password VARCHAR(255) NOT NULL,
+      PRIMARY KEY (id)
+    );
+    ```
+
+    **mascotas** — stores pet records linked to an owner (`id_dueno`):
+
+    ```sql
+    CREATE TABLE mascotas (
+      id            INT          NOT NULL AUTO_INCREMENT,
+      nombre        VARCHAR(255) NOT NULL,
+      raza          VARCHAR(255) NOT NULL,
+      edad          INT          NOT NULL,
+      observaciones TEXT,
+      id_dueno      INT          NOT NULL,
+      activa        TINYINT(1)   NOT NULL DEFAULT 1,
+      PRIMARY KEY (id)
+    );
+    ```
+
+    **citas** — stores grooming appointments:
+
+    ```sql
+    CREATE TABLE citas (
+      id           INT          NOT NULL AUTO_INCREMENT,
+      fecha        DATE         NOT NULL,
+      hora         TIME         NOT NULL,
+      id_mascota   INT          NOT NULL,
+      id_peluquera INT          NOT NULL,
+      notas        TEXT,
+      estado       VARCHAR(50),
+      PRIMARY KEY (id)
+    );
+    ```
+
+    <Note>
+      Passwords are never stored in plain text. The `register` method in `usuarioModel.php` hashes every password with `password_hash($password, PASSWORD_BCRYPT)` before inserting it, and login verification uses `password_verify()`.
+    </Note>
+  </Step>
+
+  <Step title="Configure the database connection">
+    Open `src/config/database.php` and update the four private properties to match your environment:
+
+    ```php
+    <?php
+
+    class Database {
+
+        private $host     = "localhost";
+        private $db_name  = "peluqueria_canina";
+        private $username = "your_db_user";
+        private $password = "your_db_password";
+        private $conn;
+
+        public function getConnection() {
+
+            $this->conn = null;
+
+            try {
+                $this->conn = new PDO(
+                    "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8",
+                    $this->username,
+                    $this->password
+                );
+
+                $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            } catch (PDOException $exception) {
+                echo "Error de conexión: " . $exception->getMessage();
+            }
+
+            return $this->conn;
+        }
+    }
+    ```
+
+    <Warning>
+      The default configuration in this file contains hardcoded credentials (`root` / `Admin12345`). Replace these with a dedicated database user that has only the permissions required by the API before deploying to any shared or production environment.
+    </Warning>
+  </Step>
+
+  <Step title="Verify the connection">
+    Navigate to `test_conexion.php` in your browser or run it from the command line:
+
+    ```bash
+    php test_conexion.php
+    ```
+
+    A successful connection prints `Conexión correcta`. If you see an error message, double-check the host, database name, username, and password in `src/config/database.php`.
+  </Step>
+</Steps>

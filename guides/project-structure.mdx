@@ -1,0 +1,70 @@
+---
+title: "Understanding the Pelupatas API project structure"
+description: "Learn how the Pelupatas Backend API is organized into routes, controllers, models, config, and middleware layers following an MVC-like pattern."
+---
+
+The Pelupatas Backend API follows an MVC-like architecture where each layer has a single responsibility. Routes dispatch incoming HTTP requests, controllers contain the business logic, models execute database queries, and middleware guards protected endpoints with JWT authentication. This separation makes the codebase easy to navigate and extend.
+
+## Directory tree
+
+```text
+src/
+├── config/
+│   ├── database.php     # PDO MySQL connection
+│   └── jwt.php          # JWT token handler
+├── controllers/
+│   ├── authController.php
+│   ├── citaController.php
+│   ├── mascotaController.php
+│   └── usuarioController.php
+├── libs/
+│   └── jwt/             # Firebase JWT library
+├── middlewares/
+│   └── auth.middlewares.php  # JWT Bearer validation
+├── models/
+│   ├── citaModel.php
+│   ├── mascotaModel.php
+│   └── usuarioModel.php
+├── routes/
+│   ├── api.routes.php   # Main router
+│   └── api/
+│       ├── citas.routes.php
+│       ├── mascotas.routes.php
+│       └── usuario.routes.php
+└── .htaccess            # Apache rewrite config
+```
+
+## Layers
+
+**Routes** — `src/routes/api.routes.php` is the entry point for every request. It reads the URI, strips the base path `/pelupatas/backend/src/api`, and delegates to the appropriate sub-router under `src/routes/api/` based on the first path segment (`mascotas`, `citas`, or `login`).
+
+**Controllers** — Each controller receives the parsed request from its route file and applies business logic: validating input, calling one or more model methods, and returning a JSON response with the appropriate HTTP status code.
+
+**Models** — Model classes hold all SQL queries for a single table. They accept a PDO connection via their constructor and expose named methods (`createMascota`, `getCitasById`, etc.) so controllers never write raw SQL.
+
+**Config** — `database.php` exposes a `Database` class whose `getConnection()` method returns a configured PDO instance connected to the `peluqueria_canina` MySQL database. `jwt.php` exposes a `JwtHandler` class that signs tokens with HS256 and a 1-hour expiry.
+
+**Middlewares** — `auth.middlewares.php` provides a static `JwtMiddleware::check()` method. Any route file that requires authentication calls this method before delegating to a controller. It reads the `Authorization` header, extracts the Bearer token, and returns the decoded user data or halts with a 401 response.
+
+## Request lifecycle
+
+<Steps>
+  <Step title="Apache rewrites the request">
+    The `.htaccess` rule `RewriteRule ^api/(.*)$ routes/api.routes.php [QSA,L]` forwards any request matching `api/*` to `src/routes/api.routes.php`.
+  </Step>
+  <Step title="Main router parses the URI">
+    `api.routes.php` strips the base path and reads the first path segment to identify the resource (`mascotas`, `citas`, or `login`).
+  </Step>
+  <Step title="Sub-router applies authentication">
+    The matching sub-router (e.g., `mascotas.routes.php`) calls `JwtMiddleware::check()` on protected routes, which validates the Bearer token and returns the decoded user payload.
+  </Step>
+  <Step title="Controller executes business logic">
+    The controller method validates the request body, calls the relevant model method, and builds the response array.
+  </Step>
+  <Step title="Model queries the database">
+    The model prepares and executes a parameterized PDO statement against the `peluqueria_canina` MySQL database and returns the result.
+  </Step>
+  <Step title="JSON response is returned">
+    The controller encodes the result as JSON and sets the appropriate HTTP status code before the response is sent to the client.
+  </Step>
+</Steps>
